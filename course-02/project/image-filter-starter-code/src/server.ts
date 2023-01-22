@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
@@ -13,29 +13,28 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
-  app.get("/filteredimage", async (req, res) => {
+  app.get("/filteredimage", async (req: express.Request, res: express.Response, next: NextFunction) => {
     const { image_url } = (req.query as { image_url: string });
 
-    //console.log(image_url);
-    if(!image_url) {
-      return res.status(400).send("You need to enter an image URL! :)");
+    if (!image_url) {
+        return res.status(400).send("You need to enter an image URL! :)");
     }
-    console.log("DONE");
-    filterImageFromURL(image_url)
-    .then(result_url => {
-      return res.status(200).sendFile(result_url, err => {
-        if(!err) {
-          let result_arr: string[] = [result_url];
-          deleteLocalFiles(result_arr);
-        }
-      });
-    }).catch(() => {
-      return res.status(422).send("Can't apply filter, try another image?");
-    }) 
-    //return res.status(200).send("Done");
+
+    try {
+        const result_url = await filterImageFromURL(image_url);
+        res.status(200).sendFile(result_url, err => {
+            if (!err) {
+                let result_arr: string[] = [result_url];
+                deleteLocalFiles(result_arr);
+            }
+        });
+    } catch (error) {
+        return res.status(422).send("Can't apply filter, try another image?");
+    }
+});
     
 
-  })
+  
 
   // @TODO1 IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
